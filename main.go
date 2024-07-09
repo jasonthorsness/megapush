@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -124,6 +124,7 @@ func mainInner() error {
 		return err
 	}
 	fmt.Printf("Connected to SingleStore %s\n", version)
+	fmt.Println("Creating target table")
 
 	query := `DROP TABLE IF EXISTS ` + table
 	_, err = db.Exec(query)
@@ -155,7 +156,7 @@ func mainInner() error {
 	batchSize := bufferSizeBytes / (2*int64(len(strconv.FormatInt(math.MaxInt64, 10))) + payloadSize + 3)
 
 	// Generator
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < max(1, runtime.NumCPU()-1); i++ {
 		wgGen.Add(1)
 		go func() {
 			defer wgGen.Done()
@@ -196,6 +197,12 @@ func mainInner() error {
 		}()
 	}
 
+	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	fmt.Println("Generating test data")
+
 	go func() {
 		wgGen.Wait()
 		close(bufferReadyChannel)
@@ -205,7 +212,7 @@ func mainInner() error {
 	start := time.Now()
 
 	// Pusher
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < runtime.NumCPU()*4; i++ {
 		go func() {
 			readerName := strconv.FormatInt(int64(i), 10)
 			for {
