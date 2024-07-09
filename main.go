@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -198,41 +197,19 @@ func mainInner() error {
 		}()
 	}
 
-	fmt.Println("Generating test data locally (filling buffers)")
-
-	bar := progressbar.NewOptions64(
-		numBuffers,
-		progressbar.OptionSetWriter(os.Stdout),
-		progressbar.OptionSetWidth(10),
-		progressbar.OptionThrottle(100*time.Millisecond),
-		progressbar.OptionShowCount(),
-		progressbar.OptionOnCompletion(func() {
-			_, err := fmt.Fprint(os.Stdout, "\n")
-			if err != nil {
-				panic(err)
-			}
-		}),
-		progressbar.OptionSpinnerType(14),
-		progressbar.OptionSetRenderBlankState(true),
-	)
+	fmt.Println()
 	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
 		time.Sleep(500 * time.Millisecond)
-		err = bar.Set(len(bufferReadyChannel))
-		if err != nil {
-			return err
-		}
+		fmt.Printf("\r%d/%d", len(bufferReadyChannel), numBuffers)
 	}
-	err = bar.Finish()
-	if err != nil {
-		return err
-	}
+	fmt.Printf("\r%d/%d", numBuffers, numBuffers)
+	fmt.Println()
 
 	go func() {
 		wgGen.Wait()
 		close(bufferReadyChannel)
 	}()
 
-	fmt.Println("Loading the data!")
 	fmt.Println("Start time: ", time.Now().Format("2006-01-02 15:04:05"))
 	start := time.Now()
 
@@ -275,35 +252,26 @@ func mainInner() error {
 		}()
 	}
 
-	bar = progressbar.NewOptions64(
-		numRows*payloadSize,
-		progressbar.OptionSetWriter(os.Stdout),
-		progressbar.OptionSetWidth(10),
-		progressbar.OptionThrottle(100*time.Millisecond),
-		progressbar.OptionShowCount(),
-		progressbar.OptionOnCompletion(func() {
-			_, err := fmt.Fprint(os.Stdout, "\n")
-			if err != nil {
-				panic(err)
-			}
-		}),
-		progressbar.OptionSpinnerType(14),
-		progressbar.OptionSetRenderBlankState(true),
-	)
+	fmt.Println()
 	for {
-		err := bar.Set64(loaded.Load())
-		if err != nil {
-			return err
+		loadedNow := loaded.Load()
+		if loadedNow < 1024*1024*1024 {
+			fmt.Printf("\r%04d MiB", loadedNow/1024*1024)
+		} else {
+			fmt.Printf("\r%04d GiB", loadedNow/1024*1024*1024)
 		}
 		if remaining.Load() <= 0 && len(bufferRecycleChannel) == int(numBuffers) {
-			err = bar.Finish()
-			if err != nil {
-				return err
+			loadedNow = numRows * payloadSize
+			if loadedNow < 1024*1024*1024 {
+				fmt.Printf("\r%04d MiB", loadedNow/1024*1024)
+			} else {
+				fmt.Printf("\r%04d GiB", loadedNow/1024*1024*1024)
 			}
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
+	fmt.Println()
 
 	fmt.Println("End time: ", time.Now().Format("2006-01-02 15:04:05"))
 	elapsed := time.Since(start)
