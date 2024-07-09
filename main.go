@@ -262,10 +262,10 @@ func mainInner() error {
 
 	for {
 		loadedNow := loaded.Load()
-		fmt.Printf("\r%4d / %4d %s", loadedNow/divisor, totalBytesToLoad/divisor, suffix)
+		fmt.Printf("\r%4d / %4d %s %s", loadedNow/divisor, totalBytesToLoad/divisor, suffix, time.Since(start).Round(time.Second))
 		if remaining.Load() <= 0 && len(bufferRecycleChannel) == int(numBuffers) {
 			loadedNow = numRows * payloadSize
-			fmt.Printf("\r%4d / %4d %s", totalBytesToLoad, totalBytesToLoad, suffix)
+			fmt.Printf("\r%4d / %4d %s %s", totalBytesToLoad/divisor, totalBytesToLoad/divisor, suffix, time.Since(start).Round(time.Second))
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
