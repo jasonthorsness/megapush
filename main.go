@@ -131,10 +131,10 @@ func mainInner() error {
 		return err
 	}
 	query = `CREATE TABLE ` + table + `(
-	  documentID BIGINT NOT NULL,
-      payload LONGBLOB NOT NULL,
-      SORT KEY(documentID),
-      SHARD KEY(documentID))`
+    documentID BIGINT NOT NULL,
+    payload LONGBLOB NOT NULL,
+    SORT KEY(documentID),
+    SHARD KEY(documentID))`
 	fmt.Println(query)
 	_, err = db.Exec(query)
 	if err != nil {
@@ -182,10 +182,10 @@ func mainInner() error {
 					numberBuffer = numberBuffer[:0]
 					numberBuffer = strconv.AppendInt(numberBuffer, i, 10)
 					buffer.Write(numberBuffer)
-					buffer.WriteByte(',')
+					buffer.WriteByte('\t')
 					for j := int64(0); j < payloadSize; j++ {
-						if payloadBuffer[j] == 0 || payloadBuffer[j] == ',' || payloadBuffer[j] == '\n' {
-							buffer.WriteByte(0)
+						if payloadBuffer[j] == '\\' || payloadBuffer[j] == '\t' || payloadBuffer[j] == '\n' {
+							buffer.WriteByte('\\')
 						}
 						buffer.WriteByte(payloadBuffer[j])
 					}
@@ -211,7 +211,7 @@ func mainInner() error {
 					return
 				}
 				mysql.RegisterReaderHandler(readerName, func() io.Reader { return batch.buffer })
-				query := "LOAD DATA LOCAL INFILE 'Reader::" + readerName + "' INTO TABLE " + table + " FIELDS TERMINATED BY ',' ESCAPED BY '\000' LINES TERMINATED BY '\n'"
+				query := "LOAD DATA LOCAL INFILE 'Reader::" + readerName + "' INTO TABLE " + table
 				_, err := db.Exec(query)
 				if err != nil {
 					fmt.Println(err)
