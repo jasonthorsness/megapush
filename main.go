@@ -5,8 +5,6 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"fmt"
-	"github.com/go-sql-driver/mysql"
-	"github.com/schollz/progressbar/v3"
 	"io"
 	"math"
 	"os"
@@ -15,6 +13,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
+	"github.com/schollz/progressbar/v3"
 )
 
 const (
@@ -150,7 +151,7 @@ func mainInner() error {
 	wgGen := sync.WaitGroup{}
 
 	for i := int64(0); i < numBuffers; i++ {
-		bufferRecycleChannel <- &bytes.Buffer{}
+		bufferRecycleChannel <- new(bytes.Buffer)
 	}
 
 	batchSize := bufferSizeBytes / (2*int64(len(strconv.FormatInt(math.MaxInt64, 10))) + payloadSize + 3)
@@ -191,6 +192,7 @@ func mainInner() error {
 					}
 					buffer.WriteByte('\n')
 				}
+
 				bufferReadyChannel <- rowBatch{count, buffer}
 			}
 		}()
@@ -210,13 +212,14 @@ func mainInner() error {
 				if !ok {
 					return
 				}
-				mysql.RegisterReaderHandler(readerName, func() io.Reader { return batch.buffer })
+				mysql.RegisterReaderHandler(readerName, func() io.Reader { return bytes.NewReader(batch.buffer.Bytes()) })
 				query := "LOAD DATA LOCAL INFILE 'Reader::" + readerName + "' INTO TABLE " + table
 				_, err := db.Exec(query)
 				if err != nil {
-					fmt.Println(batch.count, query)
+					fmt.Println(batch.count, batch.buffer.Len(), query)
 					fmt.Println(err)
-					f, err := os.Create("err.tsv")
+					errorFile := readerName + ".err.tsv"
+					f, err := os.Create(errorFile)
 					if err != nil {
 						fmt.Println(err)
 						os.Exit(1)
@@ -225,7 +228,11 @@ func mainInner() error {
 					if err != nil {
 						fmt.Println(err)
 					}
-					fmt.Println("Wrote to err.tsv")
+					err = f.Close()
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println("Wrote to " + errorFile)
 					os.Exit(1)
 				}
 				mysql.DeregisterReaderHandler(readerName)
