@@ -92,7 +92,7 @@ func mainInner() error {
 	}
 	payloadSize := int64(parsedPayloadSize)
 
-	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?tls=true", user, password, host, parsedPort, database)
+	dsn := fmt.Sprintf("%s:%s@tcp(%s:%d)/%s?tls=skip-verify", user, password, host, parsedPort, database)
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return err
@@ -204,7 +204,7 @@ func mainInner() error {
 	}()
 
 	// Pusher
-	for i := 0; i < runtime.NumCPU(); i++ {
+	for i := 0; i < runtime.NumCPU()*4; i++ {
 		go func() {
 			readerName := strconv.FormatInt(int64(i), 10)
 			for {
