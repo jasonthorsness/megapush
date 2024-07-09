@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
-	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"io"
 	"math"
+	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -145,7 +145,6 @@ func mainInner() error {
 	remaining.Store(numRows)
 	loaded := atomic.Int64{}
 
-	fmt.Println("buffers", numBuffers)
 	bufferReadyChannel := make(chan rowBatch, numBuffers)
 	bufferRecycleChannel := make(chan *bytes.Buffer, numBuffers)
 	wgGen := sync.WaitGroup{}
@@ -159,6 +158,7 @@ func mainInner() error {
 	// Generator
 	for i := 0; i < max(1, runtime.NumCPU()-1); i++ {
 		wgGen.Add(1)
+		r := rand.New(rand.NewSource(int64(i)))
 		go func() {
 			defer wgGen.Done()
 			numberBuffer := make([]byte, 0, 20)
@@ -176,7 +176,7 @@ func mainInner() error {
 				}
 
 				for i := from; i < from+count; i++ {
-					n, err := rand.Read(payloadBuffer)
+					n, err := r.Read(payloadBuffer)
 					if err != nil || n < len(payloadBuffer) {
 						panic(err)
 					}
@@ -200,7 +200,21 @@ func mainInner() error {
 
 	fmt.Println("Generating test data")
 
-	bar := progressbar.Default(numBuffers)
+	bar := progressbar.NewOptions64(
+		numBuffers,
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionSetWidth(10),
+		progressbar.OptionThrottle(100*time.Millisecond),
+		progressbar.OptionShowCount(),
+		progressbar.OptionOnCompletion(func() {
+			_, err := fmt.Fprint(os.Stdout, "\n")
+			if err != nil {
+				panic(err)
+			}
+		}),
+		progressbar.OptionSpinnerType(14),
+		progressbar.OptionSetRenderBlankState(true),
+	)
 	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
 		time.Sleep(500 * time.Millisecond)
 		err = bar.Set(len(bufferReadyChannel))
@@ -260,7 +274,21 @@ func mainInner() error {
 		}()
 	}
 
-	bar = progressbar.DefaultBytes(numRows * payloadSize)
+	bar = progressbar.NewOptions64(
+		numRows*payloadSize,
+		progressbar.OptionSetWriter(os.Stdout),
+		progressbar.OptionSetWidth(10),
+		progressbar.OptionThrottle(100*time.Millisecond),
+		progressbar.OptionShowCount(),
+		progressbar.OptionOnCompletion(func() {
+			_, err := fmt.Fprint(os.Stdout, "\n")
+			if err != nil {
+				panic(err)
+			}
+		}),
+		progressbar.OptionSpinnerType(14),
+		progressbar.OptionSetRenderBlankState(true),
+	)
 	for {
 		err := bar.Set64(loaded.Load())
 		if err != nil {
