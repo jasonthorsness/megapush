@@ -214,7 +214,18 @@ func mainInner() error {
 				query := "LOAD DATA LOCAL INFILE 'Reader::" + readerName + "' INTO TABLE " + table
 				_, err := db.Exec(query)
 				if err != nil {
+					fmt.Println(batch.count, query)
 					fmt.Println(err)
+					f, err := os.Create("err.tsv")
+					if err != nil {
+						fmt.Println(err)
+						os.Exit(1)
+					}
+					_, err = f.Write(batch.buffer.Bytes())
+					if err != nil {
+						fmt.Println(err)
+					}
+					fmt.Println("Wrote to err.tsv")
 					os.Exit(1)
 				}
 				mysql.DeregisterReaderHandler(readerName)
