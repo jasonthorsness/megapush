@@ -200,8 +200,17 @@ func mainInner() error {
 
 	fmt.Println("Generating test data")
 
+	bar := progressbar.Default(numBuffers)
 	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
 		time.Sleep(500 * time.Millisecond)
+		err = bar.Set(len(bufferReadyChannel))
+		if err != nil {
+			return err
+		}
+	}
+	err = bar.Finish()
+	if err != nil {
+		return err
 	}
 
 	go func() {
@@ -251,18 +260,16 @@ func mainInner() error {
 		}()
 	}
 
-	bar := progressbar.DefaultBytes(numRows * payloadSize)
+	bar = progressbar.DefaultBytes(numRows * payloadSize)
 	for {
 		err := bar.Set64(loaded.Load())
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			return err
 		}
 		if remaining.Load() <= 0 && len(bufferRecycleChannel) == int(numBuffers) {
 			err = bar.Finish()
 			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				return err
 			}
 			break
 		}
