@@ -197,7 +197,7 @@ func mainInner() error {
 		}()
 	}
 
-	fmt.Println()
+	fmt.Println("Generating test data locally (filling buffers)")
 	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
 		time.Sleep(500 * time.Millisecond)
 		fmt.Printf("\r%d/%d", len(bufferReadyChannel), numBuffers)
@@ -252,21 +252,20 @@ func mainInner() error {
 		}()
 	}
 
-	fmt.Println()
+	totalBytesToLoad := numRows * payloadSize
+	suffix := "MiB"
+	divisor := int64(1024 * 1024)
+	if totalBytesToLoad >= 10*1024*1024*1024 {
+		suffix = "GiB"
+		divisor = int64(1024 * 1024 * 1024)
+	}
+
 	for {
 		loadedNow := loaded.Load()
-		if loadedNow < 1024*1024*1024 {
-			fmt.Printf("\r%04d MiB", loadedNow/1024*1024)
-		} else {
-			fmt.Printf("\r%04d GiB", loadedNow/1024*1024*1024)
-		}
+		fmt.Printf("\r%4d / %4d %s", loadedNow/divisor, totalBytesToLoad/divisor, suffix)
 		if remaining.Load() <= 0 && len(bufferRecycleChannel) == int(numBuffers) {
 			loadedNow = numRows * payloadSize
-			if loadedNow < 1024*1024*1024 {
-				fmt.Printf("\r%04d MiB", loadedNow/1024*1024)
-			} else {
-				fmt.Printf("\r%04d GiB", loadedNow/1024*1024*1024)
-			}
+			fmt.Printf("\r%4d / %4d %s", totalBytesToLoad, totalBytesToLoad, suffix)
 			break
 		}
 		time.Sleep(250 * time.Millisecond)
