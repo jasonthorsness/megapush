@@ -158,6 +158,7 @@ func mainInner() error {
 	// Generator
 	for i := 0; i < max(1, runtime.NumCPU()-1); i++ {
 		wgGen.Add(1)
+		fmt.Println(i)
 		go func() {
 			defer wgGen.Done()
 			numberBuffer := make([]byte, 0, 20)
@@ -197,11 +198,11 @@ func mainInner() error {
 		}()
 	}
 
-	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
-		time.Sleep(100 * time.Millisecond)
-	}
-
 	fmt.Println("Generating test data")
+
+	for len(bufferReadyChannel) < int(numBuffers) && remaining.Load() > 0 {
+		time.Sleep(500 * time.Millisecond)
+	}
 
 	go func() {
 		wgGen.Wait()
