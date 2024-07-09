@@ -126,7 +126,6 @@ func mainInner() error {
 	fmt.Printf("Connected to SingleStore %s\n", version)
 
 	query := `DROP TABLE IF EXISTS ` + table
-	fmt.Println(query)
 	_, err = db.Exec(query)
 	if err != nil {
 		return err
@@ -136,7 +135,6 @@ func mainInner() error {
     payload LONGBLOB NOT NULL,
     SORT KEY(documentID),
     SHARD KEY(documentID))`
-	fmt.Println(query)
 	_, err = db.Exec(query)
 	if err != nil {
 		return err
@@ -203,8 +201,11 @@ func mainInner() error {
 		close(bufferReadyChannel)
 	}()
 
+	fmt.Println("Start time: ", time.Now().Format("2006-01-02 15:04:05"))
+	start := time.Now()
+
 	// Pusher
-	for i := 0; i < runtime.NumCPU()*4; i++ {
+	for i := 0; i < runtime.NumCPU(); i++ {
 		go func() {
 			readerName := strconv.FormatInt(int64(i), 10)
 			for {
@@ -260,6 +261,9 @@ func mainInner() error {
 		time.Sleep(250 * time.Millisecond)
 	}
 
+	fmt.Println("End time: ", time.Now().Format("2006-01-02 15:04:05"))
+	elapsed := time.Since(start)
+	fmt.Println("Elapsed time: ", elapsed)
 	fmt.Println("done")
 	return nil
 }
