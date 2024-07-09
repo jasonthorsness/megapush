@@ -198,7 +198,7 @@ func mainInner() error {
 		}()
 	}
 
-	fmt.Println("Generating test data")
+	fmt.Println("Generating test data locally (filling buffers)")
 
 	bar := progressbar.NewOptions64(
 		numBuffers,
@@ -232,6 +232,7 @@ func mainInner() error {
 		close(bufferReadyChannel)
 	}()
 
+	fmt.Println("Loading the data!")
 	fmt.Println("Start time: ", time.Now().Format("2006-01-02 15:04:05"))
 	start := time.Now()
 
