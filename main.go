@@ -2,11 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"database/sql"
 	"fmt"
 	"io"
 	"math"
-	"math/rand"
 	"os"
 	"runtime"
 	"strconv"
@@ -145,6 +145,7 @@ func mainInner() error {
 	remaining.Store(numRows)
 	loaded := atomic.Int64{}
 
+	fmt.Println("buffers", numBuffers)
 	bufferReadyChannel := make(chan rowBatch, numBuffers)
 	bufferRecycleChannel := make(chan *bytes.Buffer, numBuffers)
 	wgGen := sync.WaitGroup{}
@@ -158,7 +159,6 @@ func mainInner() error {
 	// Generator
 	for i := 0; i < max(1, runtime.NumCPU()-1); i++ {
 		wgGen.Add(1)
-		fmt.Println(i)
 		go func() {
 			defer wgGen.Done()
 			numberBuffer := make([]byte, 0, 20)
