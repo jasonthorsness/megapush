@@ -214,7 +214,7 @@ func mainInner() error {
 	start := time.Now()
 
 	// Pusher
-	for i := 0; i < runtime.NumCPU()*4; i++ {
+	for i := 0; i < runtime.NumCPU()*2; i++ {
 		go func() {
 			readerName := strconv.FormatInt(int64(i), 10)
 			for {
