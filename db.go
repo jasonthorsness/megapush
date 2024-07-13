@@ -58,7 +58,6 @@ func execCreatePipeline(db *sql.DB, table string, bucket string, region string, 
 		`"aws_session_token": "` + sessionToken + "\"\n" +
 		`}` +
 		"' INTO TABLE " + table
-	fmt.Println(query)
 	_, err := db.Exec(query)
 	if err != nil {
 		return err

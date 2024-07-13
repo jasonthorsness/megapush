@@ -25,7 +25,7 @@ const (
 )
 
 func usage() {
-	fmt.Println("megapush ram_gib host port user password database table num_rows payload_size [s3_bucket s3_access_key_id s3_secret_access_key s3_session_token]")
+	fmt.Println("megapush ram_gib host port user password database table num_rows payload_size [s3_bucket]")
 	os.Exit(1)
 }
 
